@@ -36,7 +36,7 @@ public class StatisticsControllerTest {
     @Test
     public void testPostTransactionNoContent() throws Exception {
         when(service.register(Mockito.any())).thenReturn(false);
-        mvc.perform(post("/transactions").content(MOCK_TRANSACTION_JSON).accept(MediaType.APPLICATION_JSON))
+        mvc.perform(post("/transactions").content(MOCK_TRANSACTION_JSON).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is(HttpStatus.NO_CONTENT.value()))
                 .andExpect(content().string(""));
     }
@@ -44,7 +44,7 @@ public class StatisticsControllerTest {
     @Test
     public void testPostTransactionCreated() throws Exception {
         when(service.register(Mockito.any())).thenReturn(true);
-        mvc.perform(post("/transactions").content(MOCK_TRANSACTION_JSON).accept(MediaType.APPLICATION_JSON))
+        mvc.perform(post("/transactions").content(MOCK_TRANSACTION_JSON).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is(HttpStatus.CREATED.value()))
                 .andExpect(content().string(""));
     }
@@ -52,7 +52,7 @@ public class StatisticsControllerTest {
     @Test
     public void testGetStatistics() throws Exception {
         when(service.getStatistics()).thenReturn(new Statistics(1000, 200, 50, 10));
-        mvc.perform(get("/statistics").accept(MediaType.APPLICATION_JSON))
+        mvc.perform(get("/statistics").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sum").value(1000d))
                 .andExpect(jsonPath("$.avg").value(100d))

@@ -1,14 +1,19 @@
 package stats.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Immutable transaction.
+ *
+ * @author rui.figueira
+ */
 public class Transaction {
-    private double amount;
-    private long timestamp;
+    private final double amount;
+    private final long timestamp;
 
-    public Transaction() {
-    }
-
-    public Transaction(double amount, long timestamp) {
+    @JsonCreator
+    public Transaction(@JsonProperty("amount") double amount, @JsonProperty("timestamp") long timestamp) {
         this.amount = amount;
         this.timestamp = timestamp;
     }
@@ -17,15 +22,7 @@ public class Transaction {
         return amount;
     }
 
-    public void setAmount(double amount) {
-        this.amount = amount;
-    }
-
     public long getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
     }
 }
