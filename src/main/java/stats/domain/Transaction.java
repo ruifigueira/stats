@@ -1,7 +1,5 @@
 package stats.domain;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Equality and hashCode are the default methods, it will use object identity.
@@ -10,11 +8,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  */
 public class Transaction implements Comparable<Transaction> {
-    private final double amount;
-    private final long timestamp;
+    private double amount;
+    private long timestamp;
 
-    @JsonCreator
-    public Transaction(@JsonProperty("amount") double amount, @JsonProperty("timestamp") long timestamp) {
+    public Transaction() {
+    }
+
+    public Transaction(double amount, long timestamp) {
         this.amount = amount;
         this.timestamp = timestamp;
     }
@@ -23,8 +23,16 @@ public class Transaction implements Comparable<Transaction> {
         return amount;
     }
 
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
+
     public long getTimestamp() {
         return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     @Override
