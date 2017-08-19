@@ -1,6 +1,7 @@
 package stats.services;
 
 import java.time.Clock;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.SortedSet;
 
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import stats.domain.Statistics;
 import stats.domain.Transaction;
+import stats.utils.StatisticsAccumulator;
 
 import com.google.common.collect.Sets;
 
@@ -20,7 +22,8 @@ public class MemoryBasedStatisticsService implements StatisticsService {
 
     private static final int TIME_FRAME_DURATION = 60000;
     private final Clock clock;
-    private SortedSet<Transaction> transactions = Sets.newTreeSet();
+    // using the synchronized version
+    private SortedSet<Transaction> transactions = Collections.synchronizedSortedSet(Sets.newTreeSet());
 
     public MemoryBasedStatisticsService(Clock clock) {
         this.clock = clock;
@@ -37,26 +40,28 @@ public class MemoryBasedStatisticsService implements StatisticsService {
                     end);
             return false;
         }
+
+        synchronized (transactions) {
+            removeTransactionsOutOfFrame();
+        }
+
+        // thread-safe because of synchronized structure
         transactions.add(transaction);
         return true;
     }
 
     @Override
     public Statistics getStatistics() {
-        removeTransactionsOutOfFrame();
+        StatisticsAccumulator accumulator = new StatisticsAccumulator();
 
-        double sum = 0d;
-        double max = Double.NEGATIVE_INFINITY;
-        double min = Double.POSITIVE_INFINITY;
-        long count = transactions.size();
+        synchronized (transactions) {
+            removeTransactionsOutOfFrame();
 
-        for (Transaction transaction : transactions) {
-            sum += transaction.getAmount();
-            max = Math.max(max, transaction.getAmount());
-            min = Math.min(min, transaction.getAmount());
+            for (Transaction transaction : transactions) {
+                accumulator.accumulate(transaction.getAmount());
+            }
         }
-
-        return new Statistics(sum, max, min, count);
+        return accumulator.toStats();
     }
 
     protected void removeTransactionsOutOfFrame() {
@@ -68,6 +73,10 @@ public class MemoryBasedStatisticsService implements StatisticsService {
             if (transaction.getTimestamp() <= start) {
                 LOGGER.warn("Transaction timestamp is now older than 60 sec.");
                 iterator.remove();
+            } else {
+                // because transactions are sorted, we can be sure that
+                // no more transactions need to be removed
+                break;
             }
         }
     }
