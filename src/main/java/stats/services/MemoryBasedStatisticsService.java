@@ -44,7 +44,7 @@ public class MemoryBasedStatisticsService implements StatisticsService {
             return false;
         }
 
-        int index = (start + BUFFER_SIZE - (int) secondsPast) & BUFFER_SIZE;
+        int index = (start + BUFFER_SIZE - 1 - ((int) secondsPast)) % BUFFER_SIZE;
         accumulatorsPerSecond[index].accumulate(transaction.getAmount());
 
         return true;
