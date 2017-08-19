@@ -1,13 +1,7 @@
 package stats.domain;
 
 
-/**
- * Equality and hashCode are the default methods, it will use object identity.
- *
- * @author rui.figueira
- *
- */
-public class Transaction implements Comparable<Transaction> {
+public class Transaction {
     private double amount;
     private long timestamp;
 
@@ -33,10 +27,5 @@ public class Transaction implements Comparable<Transaction> {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
-    }
-
-    @Override
-    public int compareTo(Transaction o) {
-        return Long.compare(this.timestamp, o.timestamp);
     }
 }

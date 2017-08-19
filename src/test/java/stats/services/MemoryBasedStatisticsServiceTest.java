@@ -48,6 +48,18 @@ public class MemoryBasedStatisticsServiceTest {
         assertEqualStatistics(statistics, new Statistics(1.5, 0.7, 0.3, 3));
     }
 
+
+    @Test
+    public void testGetStatisticsTransactionsSameData() {
+        // transactions with same data
+        service.register(new Transaction(0.3, 22000L));
+        service.register(new Transaction(0.3, 22000L));
+
+        Statistics statistics = service.getStatistics();
+
+        assertEqualStatistics(statistics, new Statistics(0.6, 0.3, 0.3, 2));
+    }
+
     @Test
     public void testGetStatisticsTimePassing() {
         // regular transactions
