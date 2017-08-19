@@ -5,7 +5,7 @@ import stats.domain.Transaction;
 
 public interface StatisticsService {
 
-    public void register(Transaction transaction);
+    public boolean register(Transaction transaction);
 
     public Statistics getStatistics();
 }

@@ -1,5 +1,7 @@
 package stats.domain;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -64,7 +66,26 @@ public class Statistics {
         return min;
     }
 
-    public double getCount() {
+    public long getCount() {
         return count;
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(sum, max, min, count);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        Statistics other = (Statistics) obj;
+        return this.sum == other.sum &&
+                this.max == other.max &&
+                this.min == other.min &&
+                this.count == other.count;
+    }
+
+
 }
