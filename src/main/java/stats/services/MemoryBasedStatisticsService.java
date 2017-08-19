@@ -56,8 +56,7 @@ public class MemoryBasedStatisticsService implements StatisticsService {
 
         StatisticsAccumulator combined = new StatisticsAccumulator();
         for (int i = 0; i < accumulatorsPerSecond.length; i++) {
-            combined.accumulate(accumulatorsPerSecond[start]);
-            start = (start + 1) % BUFFER_SIZE;
+            combined.accumulate(accumulatorsPerSecond[i]);
         }
         return combined.toStats();
     }
