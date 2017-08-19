@@ -23,7 +23,7 @@ public class MemoryBasedStatisticsServiceTest {
     }
 
     @Test
-    public void testPostTransactions() {
+    public void test_postTransactions() {
         // transaction in the past, to ignore
         assertThat(service.register(new Transaction(0.1, 0))).isFalse();
         // regular transactions
@@ -33,7 +33,7 @@ public class MemoryBasedStatisticsServiceTest {
     }
 
     @Test
-    public void testGetStatisticsTimeFrame() {
+    public void test_getStatistics_time_frame() {
         // transaction in the past, to ignore
         service.register(new Transaction(0.1, 0));
         // regular transactions
@@ -48,9 +48,8 @@ public class MemoryBasedStatisticsServiceTest {
         assertEqualStatistics(statistics, new Statistics(1.5, 0.7, 0.3, 3));
     }
 
-
     @Test
-    public void testGetStatisticsTransactionsSameData() {
+    public void test_getStatistics_transactions_with_same_data() {
         // transactions with same data
         service.register(new Transaction(0.3, 22000L));
         service.register(new Transaction(0.3, 22000L));
@@ -61,7 +60,20 @@ public class MemoryBasedStatisticsServiceTest {
     }
 
     @Test
-    public void testGetStatisticsTimePassing() {
+    public void test_getStatistics_transactions_time_offset_greater_than_60_seconds() {
+        service.register(new Transaction(0.3, 22000L));
+        // we skip more than 60 seconds, all previous statistics should be reset
+        clock.setEpochSecond(140);
+
+        service.register(new Transaction(0.5, 122000L));
+
+        Statistics statistics = service.getStatistics();
+
+        assertEqualStatistics(statistics, new Statistics(0.5, 0.5, 0.5, 1));
+    }
+
+    @Test
+    public void test_getStatistics_time_passing() {
         // regular transactions
         service.register(new Transaction(0.3, 22000L));
         service.register(new Transaction(0.5, 34000L));

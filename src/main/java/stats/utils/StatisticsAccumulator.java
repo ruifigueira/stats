@@ -5,8 +5,12 @@ import stats.domain.Statistics;
 public class StatisticsAccumulator {
     private long count;
     private double sum;
-    private double min = Double.POSITIVE_INFINITY;
-    private double max = Double.NEGATIVE_INFINITY;
+    private double min;
+    private double max;
+
+    public StatisticsAccumulator() {
+        reset();
+    }
 
     public void accumulate(double val) {
         this.count++;
@@ -19,7 +23,14 @@ public class StatisticsAccumulator {
         this.count += other.count;
         this.sum += other.sum;
         this.min = Math.min(this.min, other.min);
-        this.max = Math.min(this.max, other.max);
+        this.max = Math.max(this.max, other.max);
+    }
+
+    public void reset() {
+        this.count = 0;
+        this.sum = 0;
+        this.min = Double.POSITIVE_INFINITY;
+        this.max = Double.NEGATIVE_INFINITY;
     }
 
     public Statistics toStats() {

@@ -1,113 +1,83 @@
 package stats.services;
 
 import java.time.Clock;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import stats.domain.Statistics;
 import stats.domain.Transaction;
 import stats.utils.StatisticsAccumulator;
 
-import com.google.common.collect.Maps;
-import com.google.common.primitives.Longs;
+import com.google.common.base.Preconditions;
 
 @Service
 public class MemoryBasedStatisticsService implements StatisticsService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MemoryBasedStatisticsService.class);
+    private static final int BUFFER_SIZE = 60;
 
-    static class Key implements Comparable<Key> {
-
-        private static final AtomicLong ID_GENERATOR = new AtomicLong();
-
-        long id;
-        long timestamp;
-
-        Key(long timestamp) {
-            this.id = ID_GENERATOR.getAndIncrement();
-            this.timestamp = timestamp;
-        }
-
-        public long getTimestamp() {
-            return timestamp;
-        }
-
-        @Override
-        public int compareTo(Key o) {
-            int compare = Longs.compare(this.timestamp, timestamp);
-            if (compare != 0) return compare;
-            return Longs.compare(this.id, o.id);
-        }
-
-        public static Key create(Transaction transaction) {
-            return new Key(transaction.getTimestamp());
-        }
-    }
-
-    private static final int TIME_FRAME_DURATION = 60000;
     private final Clock clock;
-    // no need to use the synchronized version because we'll wrap iteration and insertion
-    // calls in a synchronized block
-    private SortedMap<Key, Transaction> transactions = Maps.newTreeMap();
+
+    // buffer ring, constant size
+    // accumulates statistics per second
+    private StatisticsAccumulator[] accumulatorsPerSecond = new StatisticsAccumulator[BUFFER_SIZE];
+    private int start = 0;
+    private long currentSecond;
 
     public MemoryBasedStatisticsService(Clock clock) {
         this.clock = clock;
+        this.currentSecond = clock.millis() / 1000;
+        for (int i = 0; i < accumulatorsPerSecond.length; i++) {
+            accumulatorsPerSecond[i] = new StatisticsAccumulator();
+        }
     }
 
     @Override
-    public boolean register(Transaction transaction) {
-        long end = clock.millis();
-        long start = end - TIME_FRAME_DURATION;
-        if (transaction.getTimestamp() > end || transaction.getTimestamp() <= start) {
-            LOGGER.warn("Transaction timestamp {}  not in the range {} to {}",
-                    transaction.getTimestamp(),
-                    start,
-                    end);
+    public synchronized boolean register(Transaction transaction) {
+        updateCurrentTimestamp();
+
+        // "key" of this transaction, we accumulate them by its second
+        long second = transaction.getTimestamp() / 1000;
+
+        long secondsPast = currentSecond - second;
+        if (secondsPast < 0 || secondsPast >= BUFFER_SIZE) {
+            // not in the time frame
             return false;
         }
 
-        synchronized (transactions) {
-            removeTransactionsOutOfFrame();
-            transactions.put(Key.create(transaction), transaction);
-        }
+        int index = (start + BUFFER_SIZE - (int) secondsPast) & BUFFER_SIZE;
+        accumulatorsPerSecond[index].accumulate(transaction.getAmount());
 
         return true;
     }
 
     @Override
-    public Statistics getStatistics() {
-        StatisticsAccumulator accumulator = new StatisticsAccumulator();
+    public synchronized Statistics getStatistics() {
+        updateCurrentTimestamp();
 
-        synchronized (transactions) {
-            removeTransactionsOutOfFrame();
-
-            for (Transaction transaction : transactions.values()) {
-                accumulator.accumulate(transaction.getAmount());
-            }
+        StatisticsAccumulator combined = new StatisticsAccumulator();
+        for (int i = 0; i < accumulatorsPerSecond.length; i++) {
+            combined.accumulate(accumulatorsPerSecond[start]);
+            start = (start + 1) % BUFFER_SIZE;
         }
-        return accumulator.toStats();
+        return combined.toStats();
     }
 
-    protected void removeTransactionsOutOfFrame() {
-        // remove transactions out of time frame
-        long start = clock.millis() - TIME_FRAME_DURATION;
 
-        for (Iterator<Entry<Key, Transaction>> iterator = transactions.entrySet().iterator(); iterator.hasNext();) {
-            Entry<Key, Transaction> entry = iterator.next();
-            if (entry.getKey().getTimestamp() <= start) {
-                LOGGER.warn("Transaction timestamp is now older than 60 sec.");
-                iterator.remove();
-            } else {
-                // because transactions are sorted, we can be sure that
-                // no more transactions need to be removed
-                break;
-            }
+    protected void updateCurrentTimestamp() {
+        long newSecond = clock.millis() / 1000;
+
+        long secondsDiff = newSecond - currentSecond;
+        Preconditions.checkArgument(secondsDiff >= 0, "Updating timestamp to past not allowed");
+
+        int offset = secondsDiff > 60L ? 60 : (int) secondsDiff;
+
+        // shift positions to reflect offset
+        for (int i = 0; i < offset; i++) {
+            // we need to reset shifted positions
+            accumulatorsPerSecond[start].reset();
+            start = (start + 1) % BUFFER_SIZE;
         }
+
+        currentSecond = newSecond;
     }
 }
